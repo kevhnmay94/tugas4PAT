@@ -18,7 +18,7 @@ import java.io.IOException;
  * @author adwisatya
  */
 public class Worker {
-    private static final String TASK_QUEUE_NAME = "pattugas4";
+    private static final String TASK_QUEUE_NAME = "channelspat";
     
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
@@ -39,7 +39,7 @@ public class Worker {
               String message = new String(body, "UTF-8");
               System.out.println(" [x] Received '" + message + "'");
               try {
-                doWork(message);
+                //doWork(message);
               } finally {
                 System.out.println(" [x] Done");
                 channel.basicAck(envelope.getDeliveryTag(), false);

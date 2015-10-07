@@ -13,7 +13,7 @@ import com.rabbitmq.client.MessageProperties;
  * @author adwisatya
  */
 public class NewTask {
-    private static final String TASK_QUEUE_NAME = "pattugas4";
+    private static final String TASK_QUEUE_NAME = "channelspat";
     
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
