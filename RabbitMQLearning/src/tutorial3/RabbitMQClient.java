@@ -14,6 +14,7 @@ import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.MessageProperties;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -52,8 +53,8 @@ public class RabbitMQClient {
         factory.setHost(authHost);
         factory.setUsername(authUsername);
         factory.setPassword(authPassword);
-        final Connection connection = factory.newConnection();
-        final Channel channel = connection.createChannel();
+        connection = factory.newConnection();
+        channel = connection.createChannel();
 
         channel.queueDeclare(EXCHANGE_CHANNELS, false, false, false, null);
         System.out.println(" [*] Client ready!");
@@ -75,8 +76,22 @@ public class RabbitMQClient {
         };
         channel.basicConsume(EXCHANGE_CHANNELS, false, consumer);
     }
+    public void publishMessage(String message) throws UnsupportedEncodingException, IOException{
+        channel.basicPublish("", EXCHANGE_CHANNELS,MessageProperties.PERSISTENT_TEXT_PLAIN,message.getBytes("UTF-8"));
+    }
     public static void main(String[] argv) throws Exception {
         RabbitMQClient rabbitMQClient = new RabbitMQClient();
+        BufferedReader console = new BufferedReader(new InputStreamReader(System.in));        
+        String input = null;
+        String [] splitted;
+        String result = null;
+        
+        input = console.readLine();
+        while(!input.equalsIgnoreCase("/EXIT")){
+            rabbitMQClient.publishMessage(input);
+            input = console.readLine();
+        }
+        
     }
 
 }
