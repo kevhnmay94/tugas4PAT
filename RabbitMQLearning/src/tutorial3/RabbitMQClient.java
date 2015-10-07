@@ -56,10 +56,13 @@ public class RabbitMQClient {
         connection = factory.newConnection();
         channel = connection.createChannel();
 
-        channel.queueDeclare(EXCHANGE_CHANNELS, false, false, false, null);
+        channel.exchangeDeclare(EXCHANGE_CHANNELS, "fanout");
+        
+        String queueName = channel.queueDeclare(EXCHANGE_CHANNELS, false, false, false, null).getQueue();
+        channel.queueBind(queueName, EXCHANGE_CHANNELS, "");
         System.out.println(" [*] Client ready!");
         
-        channel.basicQos(1);
+        //channel.basicQos(1);
         
         final Consumer consumer = new DefaultConsumer(channel){
             @Override
