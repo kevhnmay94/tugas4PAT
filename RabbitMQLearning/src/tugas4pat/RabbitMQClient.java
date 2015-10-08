@@ -76,7 +76,7 @@ public class RabbitMQClient {
           public void handleDelivery(String consumerTag, Envelope envelope,
                                      AMQP.BasicProperties properties, byte[] body) throws IOException {
             String message = new String(body, "UTF-8");
-            System.out.println(" [x] Received '" + message + "'");
+            System.out.println("[x] Received '" + message + "'");
           }
         };
         channel.basicConsume(queueName, true, messageConsumer);
@@ -86,15 +86,14 @@ public class RabbitMQClient {
           public void handleDelivery(String consumerTag, Envelope envelope,
                                      AMQP.BasicProperties properties, byte[] body) throws IOException {
             String message = new String(body, "UTF-8");
-            System.out.println(" [x] New user: '" + message + "'");
+            System.out.println("[x] New user: '" + message + "'");
           }
         };
         channel.basicConsume(queueUser, true, userConsumer);
 
     }
     public static void publish_message(String messages) throws UnsupportedEncodingException, IOException, TimeoutException{
-        //channel.exchangeDeclare(EXCHANGE_CHANNEL_NAME, "fanout");
-        channel.basicPublish(EXCHANGE_CHANNEL_NAME, channelString, null, messages.getBytes("UTF-8"));
+        channel.basicPublish(EXCHANGE_CHANNEL_NAME, channelString, null, ("["+channelString+"]"+"["+nickname+"]"+messages).getBytes("UTF-8"));
     }
     public static void create_nickname(String _nickname) throws UnsupportedEncodingException, IOException, TimeoutException{
         nickname = _nickname;
@@ -111,7 +110,7 @@ public class RabbitMQClient {
           public void handleDelivery(String consumerTag, Envelope envelope,
                                      AMQP.BasicProperties properties, byte[] body) throws IOException {
             String message = new String(body, "UTF-8");
-            System.out.println("["+channelString+"]'" + message + "'");
+            System.out.println(message);
           }
         };
         channel.basicConsume(queueChannel, true, channelConsumer);
