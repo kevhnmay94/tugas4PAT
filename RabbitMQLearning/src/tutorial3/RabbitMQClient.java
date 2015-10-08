@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 public class RabbitMQClient {
     private static final String EXCHANGE_LOGS = "logs";
     private static final String EXCHANGE_USERS = "users";
-    private static final String EXCHANGE_CHANNELS = "channelspat";
+    private static final String EXCHANGE_NAME = "logs2";
     
     public static Connection connection;
     public static Channel channel;
@@ -53,47 +53,61 @@ public class RabbitMQClient {
         factory.setHost(authHost);
         factory.setUsername(authUsername);
         factory.setPassword(authPassword);
-        connection = factory.newConnection();
-        channel = connection.createChannel();
+//        connection = factory.newConnection();
+//        channel = connection.createChannel();
+//        channel.exchangeDeclare(EXCHANGE_CHANNELS, "fanout");
+        
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+        channel.exchangeDeclare(EXCHANGE_NAME, "fanout");
+        
+//        String queueName = channel.queueDeclare(EXCHANGE_CHANNELS, false, false, false, null).getQueue();
+//        channel.queueBind(queueName, EXCHANGE_CHANNELS, "");
+//        System.out.println(" [*] Client ready!");
 
-        channel.exchangeDeclare(EXCHANGE_CHANNELS, "fanout");
-        
-        String queueName = channel.queueDeclare(EXCHANGE_CHANNELS, false, false, false, null).getQueue();
-        channel.queueBind(queueName, EXCHANGE_CHANNELS, "");
-        System.out.println(" [*] Client ready!");
-        
+        String queueName = channel.queueDeclare().getQueue();
+        channel.queueBind(queueName, EXCHANGE_NAME, "");
         //channel.basicQos(1);
-        
-        final Consumer consumer = new DefaultConsumer(channel){
-            @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-              String message = new String(body, "UTF-8");
-              System.out.println(" [x] Received '" + message + "'");
-              try {
-                //doWork(message);
-              } finally {
-                System.out.println(" [x] Done");
-                channel.basicAck(envelope.getDeliveryTag(), false);
-              }
-            }
+        System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
+
+//        final Consumer consumer = new DefaultConsumer(channel){
+//            @Override
+//            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+//              String message = new String(body, "UTF-8");
+//              System.out.println(" [x] Received '" + message + "'");
+//              try {
+//                //doWork(message);
+//              } finally {
+//                System.out.println(" [x] Done");
+//                channel.basicAck(envelope.getDeliveryTag(), false);
+//              }
+//            }
+//        };
+        Consumer consumer = new DefaultConsumer(channel) {
+          @Override
+          public void handleDelivery(String consumerTag, Envelope envelope,
+                                     AMQP.BasicProperties properties, byte[] body) throws IOException {
+            String message = new String(body, "UTF-8");
+            System.out.println(" [x] Received '" + message + "'");
+          }
         };
-        channel.basicConsume(EXCHANGE_CHANNELS, false, consumer);
+        //channel.basicConsume(EXCHANGE_NAME, false, consumer);
+        channel.basicConsume(queueName, true, consumer);
+
     }
-    public void publishMessage(String message) throws UnsupportedEncodingException, IOException{
-        channel.basicPublish("", EXCHANGE_CHANNELS,MessageProperties.PERSISTENT_TEXT_PLAIN,message.getBytes("UTF-8"));
-    }
+
     public static void main(String[] argv) throws Exception {
         RabbitMQClient rabbitMQClient = new RabbitMQClient();
-        BufferedReader console = new BufferedReader(new InputStreamReader(System.in));        
-        String input = null;
-        String [] splitted;
-        String result = null;
-        
-        input = console.readLine();
-        while(!input.equalsIgnoreCase("/EXIT")){
-            rabbitMQClient.publishMessage(input);
-            input = console.readLine();
-        }
+//        BufferedReader console = new BufferedReader(new InputStreamReader(System.in));        
+//        String input = null;
+//        String [] splitted;
+//        String result = null;
+//        
+//        input = console.readLine();
+//        while(!input.equalsIgnoreCase("/EXIT")){
+//            rabbitMQClient.publishMessage(input);
+//            input = console.readLine();
+//        }
         
     }
 
