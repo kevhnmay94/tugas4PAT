@@ -32,14 +32,14 @@ import javax.print.attribute.standard.JobStateReason;
  */
 public class RabbitMQClient {
     private static final String EXCHANGE_LOGS = "logs";
-    private static final String EXCHANGE_USER_NAME = "usersrabbit";
-    private static final String EXCHANGE_CHANNEL_NAME = "tugaspatrabbits";
+    private static final String EXCHANGE_USER_NAME = "rabbitusers";
+    private static final String EXCHANGE_CHANNEL_NAME = "rabbitchannels";
     
     public static Connection connection = null;
     public static Channel channel = null;
     
-    public static String nickname;
-    public static String channelString;
+    public static String nickname = "";
+    public static String channelString = "";
     public String queueName;
     public String queueUser;
     public String queueChannel;
@@ -86,11 +86,35 @@ public class RabbitMQClient {
           public void handleDelivery(String consumerTag, Envelope envelope,
                                      AMQP.BasicProperties properties, byte[] body) throws IOException {
             String message = new String(body, "UTF-8");
-            System.out.println("[x] New user: '" + message + "'");
+            switch (message.substring(0,1)){
+                case "+":
+                    userList.add(message.substring(1));
+                    System.out.println("Add "+message.substring(1)+" to list");
+                    break;
+                case "-":
+                    userList.remove(userList.indexOf(message.substring(1)));
+                    System.out.println("Remove "+message.substring(1)+" from list");
+                    break;
+            }
+            System.out.println("[x] New user : '" + message.substring(0) + "'");
           }
         };
         channel.basicConsume(queueUser, true, userConsumer);
 
+    }
+    public int getIndex(ArrayList<String> e, String input){
+//        for(int i=0;i<e.size();i++){
+//            if(e.)
+//        }
+        return -1;
+    }
+    public String generate_nickname(){
+        int len = 7;
+        StringBuilder sb = new StringBuilder( len );
+        for( int i = 0; i < len; i++ ){
+           sb.append( AB.charAt( rnd.nextInt(AB.length()) ) );
+        }
+        return sb.toString();
     }
     public static void publish_message(String messages) throws UnsupportedEncodingException, IOException, TimeoutException{
         channel.basicPublish(EXCHANGE_CHANNEL_NAME, channelString, null, ("["+channelString+"]"+"["+nickname+"]"+messages).getBytes("UTF-8"));
@@ -98,22 +122,38 @@ public class RabbitMQClient {
     public static void create_nickname(String _nickname) throws UnsupportedEncodingException, IOException, TimeoutException{
         nickname = _nickname;
         //channel.exchangeDeclare(EXCHANGE_USER_NAME, "fanout");
-        channel.basicPublish(EXCHANGE_USER_NAME, "", null, (_nickname+" joining").getBytes("UTF-8"));
+        channel.basicPublish(EXCHANGE_USER_NAME, "", null, ("+"+_nickname).getBytes("UTF-8"));
+    }
+    public static void exit() throws IOException{
+        channel.basicPublish(EXCHANGE_USER_NAME, "", null, ("-"+nickname).getBytes("UTF-8"));
     }
     public void join_channel(String _channel) throws IOException{
-        channelString = _channel;
-        queueChannel = channel.queueDeclare().getQueue();
-        channel.queueBind(queueChannel, EXCHANGE_CHANNEL_NAME, _channel);
-        
-        Consumer channelConsumer = new DefaultConsumer(channel) {
-          @Override
-          public void handleDelivery(String consumerTag, Envelope envelope,
-                                     AMQP.BasicProperties properties, byte[] body) throws IOException {
-            String message = new String(body, "UTF-8");
-            System.out.println(message);
-          }
-        };
-        channel.basicConsume(queueChannel, true, channelConsumer);
+        try{
+            channelString = _channel;
+            queueChannel = channel.queueDeclare().getQueue();
+            channel.queueBind(queueChannel, EXCHANGE_CHANNEL_NAME, _channel);
+
+            Consumer channelConsumer = new DefaultConsumer(channel) {
+              @Override
+              public void handleDelivery(String consumerTag, Envelope envelope,
+                                         AMQP.BasicProperties properties, byte[] body) throws IOException {
+                String message = new String(body, "UTF-8");
+                System.out.println(message);
+              }
+            };
+            channel.basicConsume(queueChannel, true, channelConsumer);
+        }finally{
+            System.out.println("You have joined "+_channel);
+        }
+    }
+    public void leave_channel(String _channel) throws IOException, IOException{
+        try{
+            queueChannel = channel.queueDeclare().getQueue();
+            channel.queueUnbind(queueChannel, EXCHANGE_CHANNEL_NAME, _channel);
+        }finally{
+            System.out.println("You are leaving from "+channelString);
+            channelString = "";
+        }
     }
     public boolean isExist(String nickname){
         System.out.println(queueUser);
@@ -123,6 +163,11 @@ public class RabbitMQClient {
     public static void main(String[] argv) throws Exception {
         RabbitMQClient rabbitMQClient = new RabbitMQClient();
         System.out.println("Welcome to simple IRC");
+        System.out.println("Instructions:");
+        System.out.println("/nick [nickname]");
+        System.out.println("/join [channel_name]");
+        System.out.println("/leave [channel_name]");
+        System.out.println("@[channel_name] [message]");
         BufferedReader console = new BufferedReader(new InputStreamReader(System.in));        
         String input = null;
         String [] splitted;
@@ -135,19 +180,40 @@ public class RabbitMQClient {
             switch (splitted[0].toLowerCase()){
                 case "/nick":
                     System.out.println("You want to set your nickname to: "+splitted[1]);
-                    rabbitMQClient.create_nickname(splitted[1]);
+                    if(rabbitMQClient.userList.contains(splitted[1])){
+                        rabbitMQClient.create_nickname(splitted[1]);    
+                        System.out.println("Your nickname is "+splitted[1]);
+                    }else{
+                        String finalnickname = rabbitMQClient.generate_nickname();
+                        rabbitMQClient.create_nickname(finalnickname);
+                        System.out.println("Your nickname is "+finalnickname);
+                    }
                     break;
                 case "/join":
-                    System.out.println("You want to join to: "+splitted[1]);
-                    rabbitMQClient.join_channel(splitted[1]);
+                    if(!rabbitMQClient.nickname.isEmpty() && !splitted[1].isEmpty()){
+                        System.out.println("You want to join to: "+splitted[1]);
+                        rabbitMQClient.join_channel(splitted[1]);    
+                    }else{
+                        System.out.println("Please use nickname first!.");
+                    }
+                    break;
+                case "/leave":
+                    if(rabbitMQClient.channelString.isEmpty() || rabbitMQClient.nickname.isEmpty() || splitted[1].isEmpty()){
+                        System.out.println("Please use the right format!");
+                    }else{
+                        rabbitMQClient.leave_channel(splitted[1]);
+                    }
                     break;
                 default:
-                    rabbitMQClient.publish_message(input);
+                    if(rabbitMQClient.channelString.isEmpty() || rabbitMQClient.nickname.isEmpty()){
+                        System.out.println("Please user nickname or join channel first!");
+                    }else{
+                        rabbitMQClient.publish_message(input);
+                    }
                     break;
             }
             input = console.readLine();
-        }
-        
+        }  
     }
 
 }
