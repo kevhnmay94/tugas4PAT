@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -51,6 +52,8 @@ public class RabbitMQClient {
     /* attribute of methods */
     ArrayList<String> channelList =  new ArrayList<>();
     ArrayList<String> userList =  new ArrayList<>();
+    private HashMap<String, String> channelToQueue = new HashMap<>();
+    
     static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     static Random rnd = new Random();
       
@@ -130,7 +133,7 @@ public class RabbitMQClient {
             channelString = _channel;
             queueChannel = channel.queueDeclare().getQueue();
             channel.queueBind(queueChannel, EXCHANGE_CHANNEL_NAME, _channel);
-
+            
             Consumer channelConsumer = new DefaultConsumer(channel) {
               @Override
               public void handleDelivery(String consumerTag, Envelope envelope,
@@ -141,15 +144,16 @@ public class RabbitMQClient {
             };
             channel.basicConsume(queueChannel, true, channelConsumer);
             channelList.add(_channel);
+            channelToQueue.put(_channel, queueChannel);
         }finally{
             System.out.println("You have joined "+_channel);
         }
     }
     public void leave_channel(String _channel) throws IOException, IOException{
         try{
-            queueChannel = channel.queueDeclare().getQueue();
-            channel.queueUnbind(queueChannel, EXCHANGE_CHANNEL_NAME, _channel);
+            channel.queueUnbind(channelToQueue.get(_channel), EXCHANGE_CHANNEL_NAME, _channel);
             channelList.remove(channelList.indexOf(_channel));
+            channelToQueue.remove(_channel);
         }finally{
             System.out.println("You are leaving from "+_channel);
             channelString = "";
