@@ -102,6 +102,9 @@ public class RabbitMQClient {
         channel.basicConsume(queueUser, true, userConsumer);
 
     }
+    public String get_auth_host(){
+        return authHost;
+    }
     public String generate_nickname(){
         int len = 7;
         StringBuilder sb = new StringBuilder( len );
@@ -111,6 +114,7 @@ public class RabbitMQClient {
         return sb.toString();
     }
     public static void publish_message(String _channel,String messages) throws UnsupportedEncodingException, IOException, TimeoutException{
+        
         channel.basicPublish(EXCHANGE_CHANNEL_NAME, _channel, null, ("["+_channel+"]"+"["+nickname+"]"+messages).getBytes("UTF-8"));
     }
     public static void create_nickname(String _nickname) throws UnsupportedEncodingException, IOException, TimeoutException{
@@ -159,8 +163,7 @@ public class RabbitMQClient {
     }
     public static void main(String[] argv) throws Exception {
         RabbitMQClient rabbitMQClient = new RabbitMQClient();
-        System.out.println("Welcome to simple IRC");
-        System.out.println("Instructions:");
+        System.out.println("Welcome to simple IRC server @"+rabbitMQClient.get_auth_host());
         System.out.println("/nick [nickname]");
         System.out.println("/join [channel_name]");
         System.out.println("/leave [channel_name]");
@@ -216,7 +219,11 @@ public class RabbitMQClient {
                     }else{
                         if(input.substring(0,1).contains("@")){
                             String channel = splitted[0].substring(1);
+                            if(rabbitMQClient.channelList.contains(channel)){
                             rabbitMQClient.publish_message(channel,input.substring(input.indexOf(splitted[0])));
+                            }else{
+                                System.out.println("You aren't member of "+channel);
+                            }
                         }else{
                             System.out.println("Please you the right format");
                         }
@@ -226,5 +233,6 @@ public class RabbitMQClient {
             input = console.readLine();
         }  
         rabbitMQClient.exit_me();
+        
     }
 }
